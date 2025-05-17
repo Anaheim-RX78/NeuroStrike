@@ -4,11 +4,8 @@
 #include "NeuroStrikeCharacter.h"
 #include "UObject/ConstructorHelpers.h"
 
-ANeuroStrikeGameMode::ANeuroStrikeGameMode()
-	: Super()
-{
-	// set default pawn class to our Blueprinted character
-	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnClassFinder(TEXT("/Game/FirstPerson/Blueprints/BP_FirstPersonCharacter"));
-	DefaultPawnClass = PlayerPawnClassFinder.Class;
-
+ANeuroStrikeGameMode::ANeuroStrikeGameMode() : Super() {
+	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnClassFinder(
+		TEXT("/Game/FirstPerson/Blueprints/BP_FirstPersonCharacter"));
+	this->DefaultPawnClass = PlayerPawnClassFinder.Class;
 }
