@@ -16,87 +16,229 @@ struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
+/**
+ * Represents a character in the NeuroStrike game with first-person capabilities, weapon usage, and customizable input actions.
+ *
+ * This class extends the base ACharacter class and provides functionality such as managing
+ * first-person cameras, weapon mechanics, input mappings, and player-specific actions like move,
+ * look, fire, and jump. It also supports networked gameplay with server and client handling
+ * for specific actions.
+ */
 UCLASS(config=Game)
 class ANeuroStrikeCharacter : public ACharacter {
 	GENERATED_BODY()
 
-	/** Pawn mesh: 1st person view (arms; seen only by self) */
+	/**
+	 * Represents the first-person skeletal mesh for the character.
+	 *
+	 * Serves as the visual representation of the character's arms and weapon in first-person perspective,
+	 * ensuring precision and alignment with the player's viewpoint during gameplay.
+	 */
 	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
 	USkeletalMeshComponent* Mesh1P;
 
-	/** First person camera */
+	/**
+	 * Defines the first-person camera component used as the primary viewpoint for the character.
+	 *
+	 * Provides a first-person perspective, aligning closely with the character's movement and aiming direction,
+	 * ensuring an immersive experience and accurate camera behavior in gameplay scenarios.
+	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FirstPersonCameraComponent;
 
-	/** MappingContext */
+	/**
+	 * Represents the default input mapping context utilized by the character for managing input bindings.
+	 *
+	 * Facilitates the configuration of control schemes and interaction mappings, providing a base input context
+	 * for user inputs and device compatibility within the application.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputMappingContext* DefaultMappingContext;
 
-	/** Jump Input Action */
+	/**
+	 * Defines the input action associated with triggering the jump functionality for the character.
+	 *
+	 * Enables configuration and assignment of input bindings for initiating jumps, allowing for flexible
+	 * customization and compatibility with various input devices through the editor.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* JumpAction;
 
-	/** Move Input Action */
+	/**
+	 * Represents the input action associated with controlling the player's movement.
+	 *
+	 * This property allows for the configuration and mapping of input bindings for player locomotion,
+	 * facilitating customization and support for various input devices through the editor.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* MoveAction;
 
-	/** Look Input Action */
+	/**
+	 * Represents the input action associated with controlling the player's look direction.
+	 *
+	 * This property enables the mapping and configuration of input bindings for camera or view adjustments,
+	 * providing flexibility in the input system and supporting customization through the editor.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 
-	/** Fire Input Action */
+	/**
+	 * Represents the input action associated with the player's ability to fire a weapon.
+	 *
+	 * This property allows designers to define and reference the input binding for firing actions,
+	 * facilitating customization and flexibility in the input system through the editor.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* FireAction;
 
-public:
-	ANeuroStrikeCharacter();
-
-	UPROPERTY()
-	class UTP_WeaponComponent* WeaponComponent;
-
 protected:
+	/**
+	 * Handles initialization logic when the game starts or when the actor is spawned.
+	 *
+	 * This method is called once at the beginning of the game's lifecycle for this actor.
+	 * It performs setup operations like adding the default input mapping context
+	 * to the Enhanced Input system for the player's controller.
+	 */
 	virtual void BeginPlay() override;
 
 public:
-	/** Bool for AnimBP to switch to another animation set */
+	/**
+	 * Constructs an instance of ANeuroStrikeCharacter with default settings.
+	 *
+	 * This constructor initializes the character's components and properties, including the collision capsule,
+	 * first-person camera, and skeletal mesh for the first-person perspective. It also sets the initial state
+	 * of the character, such as not having a rifle.
+	 *
+	 * @return An initialized ANeuroStrikeCharacter instance with default configurations and components attached.
+	 */
+	ANeuroStrikeCharacter();
+
+	/**
+	 * Represents the weapon functionality for the character.
+	 *
+	 * This component is responsible for managing weapon-related behaviors and interactions,
+	 * such as equipping, firing, or handling weapon-specific mechanics within the character.
+	 */
+	UPROPERTY()
+	class UTP_WeaponComponent* WeaponComponent;
+
+	/**
+	 * Indicates whether the character currently possesses a rifle.
+	 *
+	 * This property holds a boolean value reflecting the character’s rifle possession status.
+	 * It is visible in the editor and can be accessed in Blueprints.
+	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	bool bHasRifle;
 
-	/** Setter to set the bool */
+	/**
+	 * Updates the character's rifle possession status.
+	 *
+	 * This method sets the value of the internal `bHasRifle` variable,
+	 * indicating whether the character currently possesses a rifle.
+	 *
+	 * @param bNewHasRifle A boolean value that determines the new rifle possession status.
+	 *                     Set to true if the character should have a rifle, false otherwise.
+	 */
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	void SetHasRifle(bool bNewHasRifle);
 
-	/** Getter for the bool */
+	/**
+	 * Checks if the character currently possesses a rifle.
+	 *
+	 * This function returns the status of whether the character is equipped with a rifle,
+	 * which is determined by the value of the internal `bHasRifle` variable.
+	 *
+	 * @return A boolean value indicating whether the character has a rifle (true if equipped, false otherwise).
+	 */
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	bool GetHasRifle();
 
+	/**
+	 * Initiates the server-side logic for firing a weapon.
+	 *
+	 * This method is called to ensure that the firing action is handled with server authority.
+	 * It is designed for replication and ensures consistency across the network
+	 * by propagating the firing request from the client to the server.
+	 */
 	UFUNCTION(Server, Reliable)
 	void ServerFire();
 
+	/**
+	 * Triggers the firing visual effects for the character.
+	 *
+	 * This method is executed across all clients and is intended to display the visual effects
+	 * associated with firing a weapon. It does not handle the actual shooting logic or server authority,
+	 * focusing solely on client-side effects such as muzzle flashes or particle animations.
+	 */
 	UFUNCTION(NetMulticast, Unreliable)
 	void FireFX();
 
+	/**
+	 * Executes the firing mechanism of the character.
+	 *
+	 * This method triggers the shooting action, which includes handling projectiles through
+	 * the weapon component and activating associated visual or auditory effects.
+	 * It ensures the weapon component is valid before executing the shooting logic.
+	 */
 	UFUNCTION()
 	void Shoot();
 
 protected:
-	/** Called for movement input */
+	/**
+	 * Handles the movement action triggered by player input.
+	 *
+	 * This method processes the 2D input value to determine the movement direction
+	 * and applies it to the character's forward and right vectors, resulting in
+	 * character movement based on the player's input.
+	 *
+	 * @param Value The input value representing the 2D vector for movement direction
+	 *              (X for right/left and Y for forward/backward movement).
+	 */
 	void Move(const FInputActionValue& Value);
 
-	/** Called for looking input */
+	/**
+	 * Handles the looking action triggered by player input.
+	 *
+	 * This method processes the input value to adjust the yaw and pitch of the character's controller,
+	 * allowing for rotational camera movement in response to player input.
+	 *
+	 * @param Value The input value representing the 2D vector for camera rotation (yaw and pitch).
+	 */
 	void Look(const FInputActionValue& Value);
 
+	/**
+	 * Handles the firing action triggered by player input.
+	 *
+	 * This method determines if the character is the server authority and either performs a local shoot action
+	 * or calls a server-side firing function for network replication.
+	 *
+	 * @param InputActionValue Represents the input value associated with the firing action.
+	 */
 	void Fire(const FInputActionValue& InputActionValue);
-	// APawn interface
+
+	/**
+	 * Sets up player input bindings for this character, including actions for movement, looking, and other functionalities.
+	 *
+	 * @param PlayerInputComponent The input component that handles player inputs for this character.
+	 */
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 
 public:
-	/** Returns Mesh1P subobject **/
+	/**
+	 * Retrieves the first-person skeletal mesh component associated with this character.
+	 *
+	 * @return A pointer to the USkeletalMeshComponent representing the first-person mesh component.
+	 */
 	USkeletalMeshComponent* GetMesh1P() const {
 		return Mesh1P;
 	}
 
-	/** Returns FirstPersonCameraComponent subobject **/
+	/**
+	 * Retrieves the first-person camera component associated with this character.
+	 *
+	 * @return A pointer to the UCameraComponent representing the first-person camera component.
+	 */
 	UCameraComponent* GetFirstPersonCameraComponent() const {
 		return FirstPersonCameraComponent;
 	}
