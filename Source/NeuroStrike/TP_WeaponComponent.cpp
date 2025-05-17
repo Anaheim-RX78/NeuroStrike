@@ -7,28 +7,10 @@
 #include "GameFramework/PlayerController.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Kismet/GameplayStatics.h"
-#include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 
 UTP_WeaponComponent::UTP_WeaponComponent() {
 	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
-}
-
-
-void UTP_WeaponComponent::Fire() {
-	if (Character == nullptr || Character->GetController() == nullptr) {
-		return;
-	}
-
-	if (this->GetOwnerRole() == ENetRole::ROLE_Authority) {
-		this->HandleProjectile();
-	} else {
-		this->ServerFire();
-	}
-}
-
-void UTP_WeaponComponent::ServerFire_Implementation() {
-	this->HandleProjectile();
 }
 
 void UTP_WeaponComponent::AttachWeapon(ANeuroStrikeCharacter* TargetCharacter) {
@@ -42,18 +24,7 @@ void UTP_WeaponComponent::AttachWeapon(ANeuroStrikeCharacter* TargetCharacter) {
 	AttachToComponent(this->Character->GetMesh1P(), AttachmentRules, FName(TEXT("GripPoint")));
 
 	this->Character->SetHasRifle(true);
-
-	if (APlayerController* PlayerController = Cast<APlayerController>(this->Character->GetController())) {
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<
-			UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer())) {
-			Subsystem->AddMappingContext(this->FireMappingContext, 1);
-		}
-
-		if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(
-			PlayerController->InputComponent)) {
-			EnhancedInputComponent->BindAction(this->FireAction, ETriggerEvent::Triggered, this, &UTP_WeaponComponent::Fire);
-		}
-	}
+	this->Character->WeaponComponent = this;
 }
 
 void UTP_WeaponComponent::HandleProjectile() {
@@ -74,11 +45,9 @@ void UTP_WeaponComponent::HandleProjectile() {
 			World->SpawnActor<ANeuroStrikeProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
 		}
 	}
-
-	this->HandleProjectileFX();
 }
 
-void UTP_WeaponComponent::HandleProjectileFX_Implementation() {
+void UTP_WeaponComponent::HandleProjectileFX() {
 	if (FireSound != nullptr) {
 		UGameplayStatics::PlaySoundAtLocation(this, FireSound, Character->GetActorLocation());
 	}
@@ -92,14 +61,5 @@ void UTP_WeaponComponent::HandleProjectileFX_Implementation() {
 }
 
 void UTP_WeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason) {
-	if (Character == nullptr) {
-		return;
-	}
-
-	if (APlayerController* PlayerController = Cast<APlayerController>(Character->GetController())) {
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<
-			UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer())) {
-			Subsystem->RemoveMappingContext(FireMappingContext);
-		}
-	}
+	if (Character == nullptr) {}
 }

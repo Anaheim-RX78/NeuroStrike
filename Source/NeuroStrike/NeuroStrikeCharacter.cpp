@@ -9,6 +9,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "TP_WeaponComponent.h"
 #include "Engine/LocalPlayer.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -16,14 +17,13 @@ DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 //////////////////////////////////////////////////////////////////////////
 // ANeuroStrikeCharacter
 
-ANeuroStrikeCharacter::ANeuroStrikeCharacter()
-{
+ANeuroStrikeCharacter::ANeuroStrikeCharacter() {
 	// Character doesnt have a rifle at start
 	bHasRifle = false;
-	
+
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
-		
+
 	// Create a CameraComponent	
 	FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
 	FirstPersonCameraComponent->SetupAttachment(GetCapsuleComponent());
@@ -38,81 +38,100 @@ ANeuroStrikeCharacter::ANeuroStrikeCharacter()
 	Mesh1P->CastShadow = false;
 	//Mesh1P->SetRelativeRotation(FRotator(0.9f, -19.19f, 5.2f));
 	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
-
 }
 
-void ANeuroStrikeCharacter::BeginPlay()
-{
+void ANeuroStrikeCharacter::BeginPlay() {
 	// Call the base class  
 	Super::BeginPlay();
 
 	// Add Input Mapping Context
-	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
+	if (APlayerController* PlayerController = Cast<APlayerController>(Controller)) {
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<
+			UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer())) {
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
-
 }
 
 //////////////////////////////////////////////////////////////////////////// Input
 
-void ANeuroStrikeCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
+void ANeuroStrikeCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) {
 	// Set up action bindings
-	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
-	{
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 		// Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+		EnhancedInputComponent->BindAction(this->JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+		EnhancedInputComponent->BindAction(this->JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
 		// Moving
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ANeuroStrikeCharacter::Move);
+		EnhancedInputComponent->BindAction(this->MoveAction, ETriggerEvent::Triggered, this,
+		                                   &ANeuroStrikeCharacter::Move);
 
 		// Looking
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ANeuroStrikeCharacter::Look);
-	}
-	else
-	{
-		UE_LOG(LogTemplateCharacter, Error, TEXT("'%s' Failed to find an Enhanced Input Component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
+		EnhancedInputComponent->BindAction(this->LookAction, ETriggerEvent::Triggered, this,
+		                                   &ANeuroStrikeCharacter::Look);
+
+		EnhancedInputComponent->BindAction(this->FireAction, ETriggerEvent::Started, this,
+		                                   &ANeuroStrikeCharacter::Fire);
+	} else {
+		UE_LOG(LogTemplateCharacter, Error,
+		       TEXT(
+			       "'%s' Failed to find an Enhanced Input Component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."
+		       ), *GetNameSafe(this));
 	}
 }
 
 
-void ANeuroStrikeCharacter::Move(const FInputActionValue& Value)
-{
+void ANeuroStrikeCharacter::FireFX_Implementation() {
+	this->WeaponComponent->HandleProjectileFX();
+}
+
+void ANeuroStrikeCharacter::Shoot() {
+	if (this->WeaponComponent == nullptr) {
+		return;
+	}
+
+	this->WeaponComponent->HandleProjectile();
+	this->FireFX();
+}
+
+void ANeuroStrikeCharacter::Move(const FInputActionValue& Value) {
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
-	if (Controller != nullptr)
-	{
+	if (Controller != nullptr) {
 		// add movement 
 		AddMovementInput(GetActorForwardVector(), MovementVector.Y);
 		AddMovementInput(GetActorRightVector(), MovementVector.X);
 	}
 }
 
-void ANeuroStrikeCharacter::Look(const FInputActionValue& Value)
-{
+void ANeuroStrikeCharacter::Look(const FInputActionValue& Value) {
 	// input is a Vector2D
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 
-	if (Controller != nullptr)
-	{
+	if (Controller != nullptr) {
 		// add yaw and pitch input to controller
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
 }
 
-void ANeuroStrikeCharacter::SetHasRifle(bool bNewHasRifle)
-{
+void ANeuroStrikeCharacter::Fire(const FInputActionValue& InputActionValue) {
+	if (this->GetLocalRole() == ROLE_Authority) {
+		this->Shoot();
+	} else {
+		this->ServerFire();
+	}
+}
+
+void ANeuroStrikeCharacter::SetHasRifle(bool bNewHasRifle) {
 	bHasRifle = bNewHasRifle;
 }
 
-bool ANeuroStrikeCharacter::GetHasRifle()
-{
+bool ANeuroStrikeCharacter::GetHasRifle() {
 	return bHasRifle;
+}
+
+void ANeuroStrikeCharacter::ServerFire_Implementation() {
+	this->Shoot();
 }
