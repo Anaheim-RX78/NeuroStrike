@@ -49,6 +49,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Fire();
 
+	UFUNCTION(Server, Reliable)
+	void ServerFire();
+
+	UFUNCTION()
+	void HandleProjectile();
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void HandleProjectileFX();
+
 protected:
 	/** Ends gameplay for this component. */
 	UFUNCTION()
