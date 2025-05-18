@@ -378,4 +378,7 @@ public:
 	// Optional multicast to notify all clients (visual/audio only, no logic)
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_OnDespawnEffects();
+
+	UPROPERTY(EditAnywhere, Category="Player")
+	UStaticMesh* Tomb;
 };

@@ -10,6 +10,7 @@
 #include "InputActionValue.h"
 #include "TP_WeaponComponent.h"
 #include "Engine/LocalPlayer.h"
+#include "Engine/StaticMeshActor.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -187,8 +188,16 @@ void ANeuroStrikeCharacter::RequestDespawn() {
 }
 
 void ANeuroStrikeCharacter::Multicast_OnDespawnEffects_Implementation() {
-	if (!this->HasAuthority()) {
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Effects"));
+	if (this->GetLocalRole() != ROLE_Authority) {
+		// if (this->Tomb) {
+		// AStaticMeshActor* TombActor = this->GetWorld()->SpawnActor<AStaticMeshActor>(
+		// 	AStaticMeshActor::StaticClass(), this->GetActorLocation(), FRotator::ZeroRotator);
+		// if (TombActor && TombActor->GetStaticMeshComponent()) {
+		// 	TombActor->GetStaticMeshComponent()->SetStaticMesh(this->Tomb);
+		// }
+		// }
+		// TODO: To be removed
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("TEXT"));
 	}
 }
 
@@ -204,6 +213,10 @@ void ANeuroStrikeCharacter::DecreaseHealth_Implementation(float HealthCost) {
 	this->Health -= HealthCost;
 	if (this->Health <= 0.0f) {
 		this->Health = 0.0f;
-		this->Despawn_Implementation();
+		if (this->GetLocalRole() == ROLE_Authority) {
+			this->Despawn_Implementation();
+		} else {
+			this->Despawn();
+		}
 	}
 }
