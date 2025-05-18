@@ -10,6 +10,7 @@
 #include "InputActionValue.h"
 #include "TP_WeaponComponent.h"
 #include "Engine/LocalPlayer.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -29,10 +30,14 @@ ANeuroStrikeCharacter::ANeuroStrikeCharacter() {
 	this->Mesh1P->bCastDynamicShadow = false;
 	this->Mesh1P->CastShadow = false;
 	this->Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
+
+	this->Stats = this->CreateDefaultSubobject<UStatsComponent>("Stats");
 }
 
 void ANeuroStrikeCharacter::BeginPlay() {
 	Super::BeginPlay();
+
+	this->Stats->BaseStamina = this->Stats->MaxStamina;
 
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller)) {
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<
@@ -55,12 +60,33 @@ void ANeuroStrikeCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 
 		EnhancedInputComponent->BindAction(this->FireAction, ETriggerEvent::Started, this,
 		                                   &ANeuroStrikeCharacter::Fire);
+
+		EnhancedInputComponent->BindAction(this->SprintAction, ETriggerEvent::Triggered, this,
+										   &ANeuroStrikeCharacter::Sprint);
+
+		EnhancedInputComponent->BindAction(this->SprintAction, ETriggerEvent::Completed, this,
+										   &ANeuroStrikeCharacter::StopSprinting);
 	} else {
 		UE_LOG(LogTemplateCharacter, Error,
 		       TEXT(
 			       "'%s' Failed to find an Enhanced Input Component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."
 		       ), *GetNameSafe(this));
 	}
+}
+
+void ANeuroStrikeCharacter::Tick(float DeltaSeconds) {
+	Super::Tick(DeltaSeconds);
+
+	static float AccumulatedTime = 0.0f;
+	AccumulatedTime += DeltaSeconds;
+	if (AccumulatedTime >= 0.1f && this->Stats->BaseStamina < this->Stats->MaxStamina) {
+		this->Stats->BaseStamina += this->Stats->StaminaRegenRate;
+
+		AccumulatedTime = 0.0f;
+	}
+
+	// TODO: To be removed
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Speed: ") + FString::FromInt(this->GetCharacterMovement()->GetMaxSpeed()));
 }
 
 
@@ -101,6 +127,25 @@ void ANeuroStrikeCharacter::Fire(const FInputActionValue& InputActionValue) {
 	} else {
 		this->ServerFire();
 	}
+}
+
+void ANeuroStrikeCharacter::Sprint(const FInputActionValue& InputActionValue) {
+	float StaminaCost = 0.1f;
+	if (this->Stats->PlayerHasEnoughStamina(StaminaCost) && this->IsPlayerMoving()) {
+		this->GetCharacterMovement()->MaxWalkSpeed = this->SprintingSpeed;
+		this->Stats->DecreaseStamina(StaminaCost);
+	} else {
+		this->StopSprinting();
+	}
+}
+
+void ANeuroStrikeCharacter::StopSprinting() {
+	this->GetCharacterMovement()->MaxWalkSpeed = this->WalkingSpeed;
+}
+
+bool ANeuroStrikeCharacter::IsPlayerMoving() {
+	constexpr float Tolerance = 0.001f;
+	return !this->GetCharacterMovement()->GetLastInputVector().IsNearlyZero(Tolerance);
 }
 
 void ANeuroStrikeCharacter::SetHasRifle(bool bNewHasRifle) {

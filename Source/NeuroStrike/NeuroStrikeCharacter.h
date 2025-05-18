@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "StatsComponent.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
 #include "NeuroStrikeCharacter.generated.h"
@@ -91,6 +92,16 @@ class ANeuroStrikeCharacter : public ACharacter {
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* FireAction;
 
+	/**
+	 * Represents the input action used for triggering the sprint functionality in the game.
+	 *
+	 * This variable allows binding to a defined input within the project settings, enabling
+	 * character movement to transition into a sprint state when activated. It can be edited
+	 * in the editor, is accessible in Blueprint, and is categorized under Input settings.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	TObjectPtr<UInputAction> SprintAction;
+
 protected:
 	/**
 	 * Handles initialization logic when the game starts or when the actor is spawned.
@@ -130,6 +141,16 @@ public:
 	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	bool bHasRifle;
+
+	/**
+	 * A reference to the stats component used to manage the character's attributes and gameplay statistics.
+	 *
+	 * This component handles various gameplay-related statistics such as health, stamina, and other
+	 * configurable attributes. It ensures real-time tracking and updates required for the character's
+	 * performance during gameplay.
+	 */
+	UPROPERTY(VisibleAnywhere)
+	UStatsComponent* Stats;
 
 	/**
 	 * Updates the character's rifle possession status.
@@ -218,9 +239,61 @@ protected:
 	void Fire(const FInputActionValue& InputActionValue);
 
 	/**
+	 * Defines the movement speed of the character while walking.
+	 *
+	 * This property determines the walking speed in units per second and is used to configure
+	 * the character's pace during standard movement. It can be modified or referenced to handle
+	 * movement mechanics or gameplay-related features tied to walking behavior. Accessible in
+	 * the Movement category for inspection and tuning.
+	 */
+	UPROPERTY(VisibleAnywhere, Category="Movement")
+	float WalkingSpeed = 500.0f;
+
+	/**
+	 * Defines the sprinting speed for the character in units per second.
+	 *
+	 * This property determines the movement speed of the character when sprinting. It is part of the
+	 * movement category and can be used to adjust or query the character's maximum sprinting speed
+	 * during gameplay.
+	 */
+	UPROPERTY(VisibleAnywhere, Category="Movement")
+	float SprintingSpeed = 750.0f;
+
+	/**
+	 * Handles the sprinting action for the NeuroStrike character.
+	 *
+	 * This method is triggered by an input action and adjusts the character's movement speed
+	 * to the sprinting speed if the player has sufficient stamina and is currently moving.
+	 * If the player doesn't meet these conditions, the sprint action is stopped.
+	 *
+	 * @param InputActionValue The input value associated with the sprint action, typically
+	 * used for detecting whether the sprint command is active.
+	 */
+	void Sprint(const FInputActionValue& InputActionValue);
+
+	/**
+	 * Checks if the player character is currently moving based on their input vector.
+	 *
+	 * This method determines whether the player's movement input has a significant value,
+	 * indicating active movement. A small tolerance is applied to account for negligible input values.
+	 *
+	 * @return true if the player is moving, otherwise false.
+	 */
+	bool IsPlayerMoving();
+
+	/**
+	 * Stops the sprinting action and resets the character's movement speed to the walking speed.
+	 *
+	 * This method reverts the character's maximum walk speed to the predefined walking speed,
+	 * effectively ending any active sprinting behavior. It ensures the character transitions
+	 * back to a normal walking state.
+	 */
+	void StopSprinting();
+
+	/**
 	 * Sets up player input bindings for this character, including actions for movement, looking, and other functionalities.
 	 *
-	 * @param PlayerInputComponent The input component that handles player inputs for this character.
+	 * @param InputComponent The input component that handles player inputs for this character.
 	 */
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 
@@ -242,4 +315,6 @@ public:
 	UCameraComponent* GetFirstPersonCameraComponent() const {
 		return FirstPersonCameraComponent;
 	}
+
+	virtual void Tick(float DeltaSeconds) override;
 };
