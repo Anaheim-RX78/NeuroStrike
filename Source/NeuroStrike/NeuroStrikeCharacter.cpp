@@ -13,6 +13,7 @@
 #include "Engine/StaticMeshActor.h"
 #include "UObject/ConstructorHelpers.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 
 class AStaticMeshActor;
@@ -186,8 +187,6 @@ bool ANeuroStrikeCharacter::PlayerHasEnoughStamina(float StaminaCost) {
 	return this->BaseStamina >= StaminaCost;
 }
 
-void ANeuroStrikeCharacter::OnRep_Health() {}
-
 void ANeuroStrikeCharacter::Multicast_OnDespawnEffects_Implementation() {
 	if (this->TombMesh) {
 		FTransform SpawnTransform = GetActorTransform();
@@ -209,10 +208,12 @@ void ANeuroStrikeCharacter::DecreaseStamina(float StaminaCost) {
 
 void ANeuroStrikeCharacter::DecreaseHealth(float DamageAmount) {
 	if (HasAuthority()) {
-		Health = FMath::Clamp(Health - DamageAmount, 0.0f, MaxHealth);
-		OnRep_Health();
-
+		Health -= DamageAmount;
 		if (Health <= 0.0f) {
+			Health = 0.0f;
+		}
+
+		if (Health == 0.0f) {
 			Multicast_OnDespawnEffects();
 			Destroy();
 		}

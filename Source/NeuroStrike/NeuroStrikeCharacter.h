@@ -371,13 +371,9 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	float MaxHealth = 100.0f;
 
-	UPROPERTY(ReplicatedUsing = OnRep_Health)
+	UPROPERTY(Replicated)
 	float Health;
 
-	UFUNCTION()
-	void OnRep_Health();
-
-	// Optional multicast to notify all clients (visual/audio only, no logic)
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_OnDespawnEffects();
 
