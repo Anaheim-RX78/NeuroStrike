@@ -1,6 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "NeuroStrikeProjectile.h"
+
+#include "NeuroStrikeCharacter.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Components/SphereComponent.h"
 
@@ -26,9 +28,12 @@ ANeuroStrikeProjectile::ANeuroStrikeProjectile() {
 
 void ANeuroStrikeProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
                                    FVector NormalImpulse, const FHitResult& Hit) {
+	ANeuroStrikeCharacter* Character = Cast<ANeuroStrikeCharacter>(OtherActor);
+	if (IsValid(Character)) {
+		Character->DecreaseHealth(FMath::RandRange(10, 20));
+	}
+
 	if ((OtherActor != nullptr) && (OtherActor != this) && (OtherComp != nullptr) && OtherComp->IsSimulatingPhysics()) {
 		OtherComp->AddImpulseAtLocation(GetVelocity() * 100.0f, GetActorLocation());
-
-		this->Destroy();
 	}
 }

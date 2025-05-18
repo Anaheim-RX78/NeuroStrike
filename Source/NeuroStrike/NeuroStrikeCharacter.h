@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "StatsComponent.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
 #include "NeuroStrikeCharacter.generated.h"
@@ -141,16 +140,6 @@ public:
 	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	bool bHasRifle;
-
-	/**
-	 * A reference to the stats component used to manage the character's attributes and gameplay statistics.
-	 *
-	 * This component handles various gameplay-related statistics such as health, stamina, and other
-	 * configurable attributes. It ensures real-time tracking and updates required for the character's
-	 * performance during gameplay.
-	 */
-	UPROPERTY(VisibleAnywhere)
-	UStatsComponent* Stats;
 
 	/**
 	 * Updates the character's rifle possession status.
@@ -297,6 +286,8 @@ protected:
 	 */
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 
+	int32 PlayerId;
+
 public:
 	/**
 	 * Retrieves the first-person skeletal mesh component associated with this character.
@@ -317,4 +308,74 @@ public:
 	}
 
 	virtual void Tick(float DeltaSeconds) override;
+
+	UFUNCTION(Server, Reliable)
+	void Despawn();
+
+	void DecreaseStamina(float StaminaCost);
+
+	UFUNCTION(Server, Reliable)
+	void DecreaseHealth(float HealthCost);
+
+	/**
+ * Represents the base stamina value for the player.
+ *
+ * This value determines the starting stamina of the player. It is initialized
+ * to 100.0f by default and remains constant unless modified. Stamina depletion
+ * and regeneration mechanisms depend on this base value to set boundaries for the
+ * player's stamina management.
+ */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	float BaseStamina;
+
+	/**
+	 * Maximum stamina value for the player.
+	 *
+	 * This value signifies the upper limit of the player's stamina. It is set
+	 * to 100.0f by default and can be used in conjunction with stamina depletion
+	 * and regeneration logic to ensure the player's stamina does not exceed this cap.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	float MaxStamina = 100.0f;
+
+	/**
+	 * Rate at which stamina regenerates over time.
+	 *
+	 * This variable defines the amount of stamina replenished per second. It is set to 0.2 by
+	 * default, meaning the player's stamina will increase at a steady rate of 0.2 per second
+	 * during periods of regeneration. Adjusting this value can control the speed of stamina recovery.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	float StaminaRegenRate = 0.2f;
+
+	/**
+	 * Determines if the player has enough stamina to perform an action.
+	 *
+	 * This method checks if the player's current stamina is greater than or equal
+	 * to the specified stamina cost required for an action. It is useful for
+	 * validating whether a stamina-consuming action can proceed.
+	 *
+	 * @param StaminaCost The amount of stamina required to perform the action.
+	 * @return true if the player's current stamina is greater than or equal to the StaminaCost.
+	 *         false otherwise.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool PlayerHasEnoughStamina(float StaminaCost);
+
+	UPROPERTY(VisibleAnywhere)
+	float MaxHealth = 100.0f;
+
+	UPROPERTY(VisibleAnywhere)
+	float Health;
+
+	UFUNCTION()
+	void RequestDespawn();
+
+	// Actual despawn logic, runs only on server (authoritative)
+	UFUNCTION(Server, Reliable)
+	void Server_HandleDespawn();
+
+	// Optional multicast to notify all clients (visual/audio only, no logic)
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_OnDespawnEffects();
 };

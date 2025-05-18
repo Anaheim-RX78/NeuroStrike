@@ -30,12 +30,14 @@ ANeuroStrikeCharacter::ANeuroStrikeCharacter() {
 	this->Mesh1P->bCastDynamicShadow = false;
 	this->Mesh1P->CastShadow = false;
 	this->Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
-
-	this->Stats = this->CreateDefaultSubobject<UStatsComponent>("Stats");
 }
 
 void ANeuroStrikeCharacter::BeginPlay() {
 	Super::BeginPlay();
+
+	this->PlayerId = FMath::RandRange(1, 10000);
+	this->Health = this->MaxHealth;
+	this->BaseStamina = this->MaxStamina;
 
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller)) {
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<
@@ -60,10 +62,10 @@ void ANeuroStrikeCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 		                                   &ANeuroStrikeCharacter::Fire);
 
 		EnhancedInputComponent->BindAction(this->SprintAction, ETriggerEvent::Triggered, this,
-										   &ANeuroStrikeCharacter::Sprint);
+		                                   &ANeuroStrikeCharacter::Sprint);
 
 		EnhancedInputComponent->BindAction(this->SprintAction, ETriggerEvent::Completed, this,
-										   &ANeuroStrikeCharacter::StopSprinting);
+		                                   &ANeuroStrikeCharacter::StopSprinting);
 	} else {
 		UE_LOG(LogTemplateCharacter, Error,
 		       TEXT(
@@ -77,13 +79,30 @@ void ANeuroStrikeCharacter::Tick(float DeltaSeconds) {
 
 	static float AccumulatedTime = 0.0f;
 	AccumulatedTime += DeltaSeconds;
-	if (AccumulatedTime >= 0.1f && this->Stats->BaseStamina < this->Stats->MaxStamina) {
-		this->Stats->BaseStamina += this->Stats->StaminaRegenRate;
+	if (AccumulatedTime >= 0.1f && this->BaseStamina < this->MaxStamina) {
+		this->BaseStamina += this->StaminaRegenRate;
 
 		AccumulatedTime = 0.0f;
 	}
+
+	if (this->HasAuthority()) {
+		GEngine->AddOnScreenDebugMessage(this->PlayerId,
+		                                 5.f, FColor::Red,
+		                                 FString::Printf(TEXT("%s Health: %.1f"),
+		                                                 *GetName(),
+		                                                 this->Health
+		                                 )
+		);
+	}
 }
 
+void ANeuroStrikeCharacter::Despawn_Implementation() {
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("%s is dead"), *GetName()));
+
+	this->WeaponComponent->DestroyComponent();
+	this->Multicast_OnDespawnEffects();
+	this->Destroy();
+}
 
 void ANeuroStrikeCharacter::FireFX_Implementation() {
 	this->WeaponComponent->HandleProjectileFX();
@@ -126,9 +145,9 @@ void ANeuroStrikeCharacter::Fire(const FInputActionValue& InputActionValue) {
 
 void ANeuroStrikeCharacter::Sprint(const FInputActionValue& InputActionValue) {
 	float StaminaCost = 0.1f;
-	if (this->Stats->PlayerHasEnoughStamina(StaminaCost) && this->IsPlayerMoving()) {
+	if (this->PlayerHasEnoughStamina(StaminaCost) && this->IsPlayerMoving()) {
 		this->GetCharacterMovement()->MaxWalkSpeed = this->SprintingSpeed;
-		this->Stats->DecreaseStamina(StaminaCost);
+		this->DecreaseStamina(StaminaCost);
 	} else {
 		this->StopSprinting();
 	}
@@ -153,4 +172,38 @@ bool ANeuroStrikeCharacter::GetHasRifle() {
 
 void ANeuroStrikeCharacter::ServerFire_Implementation() {
 	this->Shoot();
+}
+
+bool ANeuroStrikeCharacter::PlayerHasEnoughStamina(float StaminaCost) {
+	return this->BaseStamina >= StaminaCost;
+}
+
+void ANeuroStrikeCharacter::RequestDespawn() {
+	if (HasAuthority()) {
+		this->Server_HandleDespawn_Implementation();
+	} else {
+		this->Server_HandleDespawn();
+	}
+}
+
+void ANeuroStrikeCharacter::Multicast_OnDespawnEffects_Implementation() {
+	if (!this->HasAuthority()) {
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Effects"));
+	}
+}
+
+void ANeuroStrikeCharacter::Server_HandleDespawn_Implementation() {
+	this->Destroy();
+}
+
+void ANeuroStrikeCharacter::DecreaseStamina(float StaminaCost) {
+	this->BaseStamina -= StaminaCost;
+}
+
+void ANeuroStrikeCharacter::DecreaseHealth_Implementation(float HealthCost) {
+	this->Health -= HealthCost;
+	if (this->Health <= 0.0f) {
+		this->Health = 0.0f;
+		this->Despawn_Implementation();
+	}
 }
