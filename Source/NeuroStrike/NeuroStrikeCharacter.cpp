@@ -11,8 +11,12 @@
 #include "TP_WeaponComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/StaticMeshActor.h"
+#include "UObject/ConstructorHelpers.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Net/UnrealNetwork.h"
 
+class AStaticMeshActor;
+class UNiagaraSystem;
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 ANeuroStrikeCharacter::ANeuroStrikeCharacter() {
@@ -86,7 +90,7 @@ void ANeuroStrikeCharacter::Tick(float DeltaSeconds) {
 		AccumulatedTime = 0.0f;
 	}
 
-	if (this->HasAuthority()) {
+	if (this->GetLocalRole() == ROLE_Authority) {
 		GEngine->AddOnScreenDebugMessage(this->PlayerId,
 		                                 5.f, FColor::Red,
 		                                 FString::Printf(TEXT("%s Health: %.1f"),
@@ -97,12 +101,15 @@ void ANeuroStrikeCharacter::Tick(float DeltaSeconds) {
 	}
 }
 
-void ANeuroStrikeCharacter::Despawn_Implementation() {
+void ANeuroStrikeCharacter::Despawn() {
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("%s is dead"), *GetName()));
 
-	this->WeaponComponent->DestroyComponent();
 	this->Multicast_OnDespawnEffects();
 	this->Destroy();
+}
+
+void ANeuroStrikeCharacter::ServerDespawn_Implementation() {
+	this->Despawn();
 }
 
 void ANeuroStrikeCharacter::FireFX_Implementation() {
@@ -179,44 +186,57 @@ bool ANeuroStrikeCharacter::PlayerHasEnoughStamina(float StaminaCost) {
 	return this->BaseStamina >= StaminaCost;
 }
 
-void ANeuroStrikeCharacter::RequestDespawn() {
-	if (HasAuthority()) {
-		this->Server_HandleDespawn_Implementation();
-	} else {
-		this->Server_HandleDespawn();
-	}
-}
+void ANeuroStrikeCharacter::OnRep_Health() {}
 
 void ANeuroStrikeCharacter::Multicast_OnDespawnEffects_Implementation() {
-	if (this->GetLocalRole() != ROLE_Authority) {
-		// if (this->Tomb) {
-		// AStaticMeshActor* TombActor = this->GetWorld()->SpawnActor<AStaticMeshActor>(
-		// 	AStaticMeshActor::StaticClass(), this->GetActorLocation(), FRotator::ZeroRotator);
-		// if (TombActor && TombActor->GetStaticMeshComponent()) {
-		// 	TombActor->GetStaticMeshComponent()->SetStaticMesh(this->Tomb);
-		// }
-		// }
-		// TODO: To be removed
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("TEXT"));
+	if (this->TombMesh) {
+		FTransform SpawnTransform = GetActorTransform();
+		AStaticMeshActor* Tomb = GetWorld()->SpawnActor<AStaticMeshActor>(
+			AStaticMeshActor::StaticClass(), SpawnTransform);
+		if (Tomb) {
+			UStaticMeshComponent* MeshComp = Tomb->GetStaticMeshComponent();
+			if (MeshComp) {
+				MeshComp->SetMobility(EComponentMobility::Movable);
+				MeshComp->SetStaticMesh(TombMesh);
+			}
+		}
 	}
-}
-
-void ANeuroStrikeCharacter::Server_HandleDespawn_Implementation() {
-	this->Destroy();
 }
 
 void ANeuroStrikeCharacter::DecreaseStamina(float StaminaCost) {
 	this->BaseStamina -= StaminaCost;
 }
 
-void ANeuroStrikeCharacter::DecreaseHealth_Implementation(float HealthCost) {
+void ANeuroStrikeCharacter::DecreaseHealth(float DamageAmount) {
+	if (HasAuthority()) {
+		Health = FMath::Clamp(Health - DamageAmount, 0.0f, MaxHealth);
+		OnRep_Health();
+
+		if (Health <= 0.0f) {
+			Multicast_OnDespawnEffects();
+			Destroy();
+		}
+	}
+}
+
+void ANeuroStrikeCharacter::DecreaseHealthHandler(float HealthCost) {
+	if (this->GetLocalRole() == ROLE_Authority) {
+		this->DecreaseHealth(HealthCost);
+	} else {
+		this->ServerDecreaseHealth(HealthCost);
+	}
+}
+
+void ANeuroStrikeCharacter::ServerDecreaseHealth_Implementation(float HealthCost) {
 	this->Health -= HealthCost;
 	if (this->Health <= 0.0f) {
 		this->Health = 0.0f;
-		if (this->GetLocalRole() == ROLE_Authority) {
-			this->Despawn_Implementation();
-		} else {
-			this->Despawn();
-		}
 	}
+	this->ServerDespawn();
+}
+
+void ANeuroStrikeCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ANeuroStrikeCharacter, Health);
 }

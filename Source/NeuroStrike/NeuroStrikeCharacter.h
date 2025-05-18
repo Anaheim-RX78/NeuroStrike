@@ -7,6 +7,7 @@
 #include "Logging/LogMacros.h"
 #include "NeuroStrikeCharacter.generated.h"
 
+class AStaticMeshActor;
 class UInputComponent;
 class USkeletalMeshComponent;
 class UCameraComponent;
@@ -308,14 +309,19 @@ public:
 	}
 
 	virtual void Tick(float DeltaSeconds) override;
+	void Despawn();
 
 	UFUNCTION(Server, Reliable)
-	void Despawn();
+	void ServerDespawn();
 
 	void DecreaseStamina(float StaminaCost);
 
-	UFUNCTION(Server, Reliable)
 	void DecreaseHealth(float HealthCost);
+
+	void DecreaseHealthHandler(float HealthCost);
+
+	UFUNCTION(Server, Reliable)
+	void ServerDecreaseHealth(float HealthCost);
 
 	/**
  * Represents the base stamina value for the player.
@@ -365,20 +371,18 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	float MaxHealth = 100.0f;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(ReplicatedUsing = OnRep_Health)
 	float Health;
 
 	UFUNCTION()
-	void RequestDespawn();
-
-	// Actual despawn logic, runs only on server (authoritative)
-	UFUNCTION(Server, Reliable)
-	void Server_HandleDespawn();
+	void OnRep_Health();
 
 	// Optional multicast to notify all clients (visual/audio only, no logic)
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_OnDespawnEffects();
 
 	UPROPERTY(EditAnywhere, Category="Player")
-	UStaticMesh* Tomb;
+	UStaticMesh* TombMesh;
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };

@@ -28,9 +28,14 @@ ANeuroStrikeProjectile::ANeuroStrikeProjectile() {
 
 void ANeuroStrikeProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
                                    FVector NormalImpulse, const FHitResult& Hit) {
-	ANeuroStrikeCharacter* Character = Cast<ANeuroStrikeCharacter>(OtherActor);
-	if (IsValid(Character)) {
-		Character->DecreaseHealth(FMath::RandRange(10, 20));
+	if (OtherActor && (OtherActor != this) && OtherComp) {
+		ANeuroStrikeCharacter* HitCharacter = Cast<ANeuroStrikeCharacter>(OtherActor);
+		if (HitCharacter) {
+			if (this->HasAuthority()) {
+				HitCharacter->DecreaseHealth(FMath::RandRange(10, 20));
+			}
+		}
+		this->Destroy();
 	}
 
 	if ((OtherActor != nullptr) && (OtherActor != this) && (OtherComp != nullptr) && OtherComp->IsSimulatingPhysics()) {
