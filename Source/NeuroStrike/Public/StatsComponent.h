@@ -66,6 +66,12 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool PlayerHasEnoughStamina(float StaminaCost);
 
+	UPROPERTY(VisibleAnywhere)
+	float MaxHealth = 100.0f;
+
+	UPROPERTY(VisibleAnywhere)
+	float Health;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;

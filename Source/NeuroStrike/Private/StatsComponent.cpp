@@ -13,6 +13,9 @@ bool UStatsComponent::PlayerHasEnoughStamina(float StaminaCost) {
 
 void UStatsComponent::BeginPlay() {
 	Super::BeginPlay();
+
+	this->Health = this->MaxHealth;
+	this->BaseStamina = this->MaxStamina;
 }
 
 void UStatsComponent::DecreaseStamina(float StaminaCost) {

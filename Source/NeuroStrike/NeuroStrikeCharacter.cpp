@@ -37,8 +37,6 @@ ANeuroStrikeCharacter::ANeuroStrikeCharacter() {
 void ANeuroStrikeCharacter::BeginPlay() {
 	Super::BeginPlay();
 
-	this->Stats->BaseStamina = this->Stats->MaxStamina;
-
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller)) {
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<
 			UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer())) {
@@ -84,9 +82,6 @@ void ANeuroStrikeCharacter::Tick(float DeltaSeconds) {
 
 		AccumulatedTime = 0.0f;
 	}
-
-	// TODO: To be removed
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Speed: ") + FString::FromInt(this->GetCharacterMovement()->GetMaxSpeed()));
 }
 
 
