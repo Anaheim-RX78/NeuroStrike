@@ -41,6 +41,7 @@ ANeuroStrikeCharacter::ANeuroStrikeCharacter() {
 void ANeuroStrikeCharacter::BeginPlay() {
 	Super::BeginPlay();
 
+	this->GetCharacterMovement()->MaxWalkSpeed = this->WalkingSpeed;
 	this->PlayerId = FMath::RandRange(1, 10000);
 	this->Health = this->MaxHealth;
 	this->BaseStamina = this->MaxStamina;
