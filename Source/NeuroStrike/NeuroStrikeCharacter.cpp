@@ -222,6 +222,12 @@ void ANeuroStrikeCharacter::DecreaseHealth(float DamageAmount) {
 			Destroy();
 		}
 	}
+
+	if (this->GetLocalRole() == ROLE_Authority) {
+		this->PrintGameOverIfNoActors();
+	} else {
+		this->ServerPrintGameOverIfNoActors();
+	}
 }
 
 void ANeuroStrikeCharacter::DecreaseHealthHandler(float HealthCost) {
@@ -238,6 +244,19 @@ void ANeuroStrikeCharacter::ServerDecreaseHealth_Implementation(float HealthCost
 		this->Health = 0.0f;
 	}
 	this->ServerDespawn();
+}
+
+void ANeuroStrikeCharacter::ServerPrintGameOverIfNoActors_Implementation() {
+	this->PrintGameOverIfNoActors();
+}
+
+void ANeuroStrikeCharacter::PrintGameOverIfNoActors() {
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), StaticClass(), FoundActors);
+
+	if (FoundActors.Num() <= 1) {
+		GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, TEXT("Game Over!"));
+	}
 }
 
 void ANeuroStrikeCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {

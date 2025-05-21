@@ -462,5 +462,10 @@ public:
 	UPROPERTY(EditAnywhere, Category="Player")
 	UStaticMesh* TombMesh;
 
+	UFUNCTION(Server, Reliable)
+	void ServerPrintGameOverIfNoActors();
+
+	void PrintGameOverIfNoActors();
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };
