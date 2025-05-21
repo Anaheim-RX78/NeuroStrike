@@ -198,6 +198,9 @@ void ANeuroStrikeCharacter::Multicast_OnDespawnEffects_Implementation() {
 			if (MeshComp) {
 				MeshComp->SetMobility(EComponentMobility::Movable);
 				MeshComp->SetStaticMesh(TombMesh);
+				FVector RelativeLocation = MeshComp->GetRelativeLocation();
+				RelativeLocation.Z -= 64.39f;
+				MeshComp->SetRelativeLocation(RelativeLocation);
 			}
 		}
 	}
