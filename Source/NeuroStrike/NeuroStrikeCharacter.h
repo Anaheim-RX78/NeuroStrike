@@ -308,18 +308,75 @@ public:
 		return FirstPersonCameraComponent;
 	}
 
+	/**
+	 * Updates the character's state every frame, handling stamina regeneration and debug information display.
+	 *
+	 * This function is called every tick and performs operations to increment the character's stamina
+	 * over time, ensuring it does not exceed the maximum stamina value. It also displays debug messages
+	 * with health information for the authoritative player on the screen during gameplay.
+	 *
+	 * @param DeltaSeconds The time in seconds that has elapsed since the last tick.
+	 */
 	virtual void Tick(float DeltaSeconds) override;
+
+	/**
+	 * Handles the character despawning process in the NeuroStrike game.
+	 *
+	 * This method broadcasts visual or audio effects to all clients using multicast, provides debug feedback,
+	 * and destroys the character instance from the game world.
+	 */
 	void Despawn();
 
+	/**
+	 * Handles the server-side logic for despawning an entity or object in the game.
+	 *
+	 * This function is marked as reliable and is executed on the server. It is intended
+	 * to ensure proper synchronization and management of game state related to despawning
+	 * entities during networked gameplay.
+	 */
 	UFUNCTION(Server, Reliable)
 	void ServerDespawn();
 
+	/**
+	 * Reduces the character's stamina by a specified amount, typically when performing stamina-consuming actions.
+	 *
+	 * This function decreases the character's base stamina based on the provided stamina cost value. It is used to manage
+	 * stamina depletion mechanics for gameplay elements such as sprinting, dodging, or using abilities.
+	 *
+	 * @param StaminaCost The amount of stamina to subtract from the character's current stamina.
+	 */
 	void DecreaseStamina(float StaminaCost);
 
+	/**
+	 * Decreases the character's health by the specified amount and handles death mechanics when health reaches zero.
+	 *
+	 * This method reduces the health of the character and checks whether the health value has fallen to or below zero.
+	 * If the character's health is depleted, it triggers necessary visual effects and destroys the character object.
+	 * Authority checks ensure that only the server can modify health and trigger related mechanics.
+	 *
+	 * @param HealthCost The amount of damage to reduce from the character's current health.
+	 */
 	void DecreaseHealth(float HealthCost);
 
+	/**
+	 * Handles the process of decreasing the character's health, ensuring proper client-server communication in a networked environment.
+	 *
+	 * If called on the server, directly decreases the health by invoking the internal function.
+	 * If called on the client, sends a request to the server to process the health decrease.
+	 *
+	 * @param HealthCost The amount of health to be deducted from the character.
+	 */
 	void DecreaseHealthHandler(float HealthCost);
 
+	/**
+	 * Decreases the character's health on the server with a specified cost.
+	 *
+	 * This function is marked to run on the server and ensures reliable execution.
+	 * It allows the reduction of health in a networked environment ensuring proper
+	 * synchronization across clients.
+	 *
+	 * @param HealthCost The amount of health to decrease.
+	 */
 	UFUNCTION(Server, Reliable)
 	void ServerDecreaseHealth(float HealthCost);
 
@@ -368,15 +425,40 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool PlayerHasEnoughStamina(float StaminaCost);
 
+	/**
+	 * Defines the maximum health value for the character.
+	 *
+	 * This variable is configurable and represents the upper limit of the character's health,
+	 * determining the maximum amount of damage the character can sustain before death or incapacitation.
+	 */
 	UPROPERTY(VisibleAnywhere)
 	float MaxHealth = 100.0f;
 
+	/**
+	 * Represents the health value of the character, indicating their current vitality in the game.
+	 *
+	 * This variable is replicated to ensure synchronization of the character's health status across the network
+	 * in multiplayer gameplay. Changes to this value reflect damage taken or health recovery during gameplay.
+	 */
 	UPROPERTY(Replicated)
 	float Health;
 
+	/**
+	 * Executes visual effects for character despawning on all connected clients.
+	 *
+	 * This function is called using the NetMulticast specifier, ensuring that the despawn effects are
+	 * replicated across the server and all clients reliably. These effects may include visual particles,
+	 * sound cues, or other representations associated with the character's disappearance from the game world.
+	 */
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_OnDespawnEffects();
 
+	/**
+	 * Configurable static mesh representing the tomb associated with the player.
+	 *
+	 * This property allows customization of the tomb mesh in the editor under the "Player" category.
+	 * It can be set to any compatible static mesh asset to visually represent the player's tomb.
+	 */
 	UPROPERTY(EditAnywhere, Category="Player")
 	UStaticMesh* TombMesh;
 
