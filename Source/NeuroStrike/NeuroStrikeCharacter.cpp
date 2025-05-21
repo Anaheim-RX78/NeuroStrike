@@ -42,7 +42,7 @@ void ANeuroStrikeCharacter::BeginPlay() {
 	Super::BeginPlay();
 
 	this->GetCharacterMovement()->MaxWalkSpeed = this->WalkingSpeed;
-	this->PlayerId = FMath::RandRange(1, 10000);
+	this->PlayerId = FMath::RandRange(2, 10000);
 	this->Health = this->MaxHealth;
 	this->BaseStamina = this->MaxStamina;
 
@@ -255,7 +255,7 @@ void ANeuroStrikeCharacter::PrintGameOverIfNoActors() {
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), StaticClass(), FoundActors);
 
 	if (FoundActors.Num() <= 1) {
-		GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, TEXT("Game Over!"));
+		GEngine->AddOnScreenDebugMessage(1, 10.0f, FColor::Red, TEXT("Game Over!"));
 	}
 }
 
